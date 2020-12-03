@@ -58,9 +58,11 @@ void VertexFit::LoadTemplate(std::string likelifile)
     fUseGraph=true;
 }
 
-void VertexFit::FitVertex()
+void VertexFit::FitVertex(HitCluster *aCl)
 {
+    fCl=aCl; 
     this->Clear();
+
     //// Finding seed by fixed grid seach (very coase)
     TVector3 pre_pos=this->MinTsdFit();
     for(int i=eX; i<=eZ; i++){ fVertex[eSeed][i]=pre_pos(i); }
@@ -70,11 +72,13 @@ void VertexFit::FitVertex()
     this->TToFSDFit();
     this->TToFT0Fit();
 
+    // Selecting hits used for the following precise fit
+    // (NOT IMPLEMENTED YET)
     ////this->SelectHits();
 
-    //// Apply precise fit
+    // Apply precise fit
     this->LikeliFit();
-    ////this->PrintVertices();
+    //this->PrintVertices();
 }
 
 void VertexFit::TToFSDFit()
@@ -405,27 +409,17 @@ void VertexFit::SetTrueVertex(const double *v)
 void VertexFit::SetParLimits(const double *v, const double dv, const double dt)
 {
     const double fac=TANK_Y/TANK_R;
-    fLim_x[0]=v[0]-dv;          fLim_x[1]=v[0]+dv;
-    fLim_y[0]=v[1]-(dv*fac);    fLim_y[1]=v[1]+(dv*fac);
-    fLim_z[0]=v[2]-dv;          fLim_z[1]=v[2]+dv;
-    fLim_t[0]=v[3]-dt;          fLim_t[3]=v[3]+2.*dt;
+    fLim[eX][eLow]=v[eX]-dv;         fLim[eX][eUp]=v[eX]+dv;
+    fLim[eY][eLow]=v[eY]-(dv*fac);   fLim[eY][eUp]=v[eY]+(dv*fac);
+    fLim[eZ][eLow]=v[eZ]-dv;         fLim[eZ][eUp]=v[eZ]+dv;
+    fLim[eT][eLow]=v[eT]-dt;         fLim[eT][eUp]=v[eT]+2.*dt;
 
-    if( fLim_x[0]<-TANK_R ){ fLim_x[0]=-TANK_R; } 
-    if( fLim_x[1]> TANK_R ){ fLim_x[1]= TANK_R; } 
-    if( fLim_y[0]<-TANK_Y ){ fLim_y[0]=-TANK_Y; } 
-    if( fLim_y[1]> TANK_Y ){ fLim_y[1]= TANK_Y; } 
-    if( fLim_z[0]<-TANK_R ){ fLim_z[0]=-TANK_R; } 
-    if( fLim_z[1]> TANK_R ){ fLim_z[1]= TANK_R; } 
-
-    fLim[eX][eLow]=fLim_x[0];
-    fLim[eY][eLow]=fLim_y[0];
-    fLim[eZ][eLow]=fLim_z[0];
-    fLim[eT][eLow]=fLim_t[0];
-
-    fLim[eX][eUp]=fLim_x[1];
-    fLim[eY][eUp]=fLim_y[1];
-    fLim[eZ][eUp]=fLim_z[1];
-    fLim[eT][eUp]=fLim_t[1];
+    if( fLim[eX][eLow]<-TANK_R ){ fLim[eX][eLow]=-TANK_R; } 
+    if( fLim[eY][eLow]<-TANK_Y ){ fLim[eY][eLow]=-TANK_Y; } 
+    if( fLim[eZ][eLow]<-TANK_R ){ fLim[eZ][eLow]=-TANK_R; } 
+    if( fLim[eX][eUp]>TANK_R ){ fLim[eX][eUp]=TANK_R; } 
+    if( fLim[eY][eUp]>TANK_Y ){ fLim[eY][eUp]=TANK_Y; } 
+    if( fLim[eZ][eUp]>TANK_R ){ fLim[eZ][eUp]=TANK_R; } 
 }
 
 void VertexFit::PrintVertex(const std::string &sName, const int &i)

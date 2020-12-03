@@ -30,10 +30,62 @@ TTree *fRooTrackerTree=NULL;
 TClonesArray *fnRooTrackerVtxTCA=NULL;
 Double_t fDetCentreY=0.;
 
-void SetDigiHits(const WCSimRootTrigger *ev, HitsManager *hitMan)
+
+void SetThisNeuCandInfo(NtagData *da, const HitCluster &cl, const float *vtx)
+{
+    NtagUtil *nu=NtagUtil::GetInstance(); 
+    int i=da->fncrNCand;
+    da->fncrN10Raw[i]   =cl.N10();
+    for(int j=0; j<4; j++)
+    {
+        da->fncrVtx[i][j]=vtx[j];
+    }
+    da->fncrDwall[i]    =nu->GetDwall(vtx);
+    da->fncrNhits[i]    =cl.N();
+    da->fncrTRaw0[i]    =cl.T(0);
+    da->fncrNCand+=1;
+}
+
+void SetMCTruthMichelEInfo(NtagData *da, const MCNeuCapManager *nm)
+{
+    da->fnctNMiE=0;
+    for(int i=0; i<nm->GetNumOfMichelEs(); i++)
+    {
+        for(int j=0; j<4; j++)
+        {
+            da->fnctMiEVtx[i][j]=nm->GetMiEVertex(i,j);
+        }
+        da->fnctMiEDwall[i]     =nm->GetMiEDwall(i);
+        da->fnctMiEEnergy[i]    =nm->GetMiEEnergy(i);
+        da->fnctMiEPrntPDG[i]   =nm->GetMiEParentPDG(i);
+        da->fnctMiEGrPrntID[i]  =nm->GetMiEGrandParentID(i);
+        da->fnctNMiE            +=1;
+    }
+}
+
+void SetMCTruthNeuCapInfo(NtagData *da, const MCNeuCapManager *nm)
+{
+    da->fnctNCap=0;
+    for(int i=0; i<nm->GetNumOfNeuCaptures(); i++)
+    {
+        for(int j=0; j<4; j++)
+        {
+            da->fnctVtx[i][j]=nm->GetCaptureVertex(i,j);
+        }
+        da->fnctDwall[i]=nm->GetCaptureDwall(i);
+        da->fnctNuc[i]  =nm->GetCaptureNucleus(i);
+        da->fnctType[i] =nm->GetIsPrimaryNeu(i); // Ancester type
+        da->fnctNGam[i] =nm->GetNumGammas(i);
+        da->fnctETot[i] =nm->GetTotalGammaEnergy(i);
+        da->fnctNCap    +=1;
+    }
+}
+
+void SetDigiHits(const WCSimRootTrigger *ev, HitsManager *hitMan, int &trigType)
 {
     float toffset=950.; // Tentative
-    if( ev->GetTriggerType()!=0 ){ toffset=100.; }
+    trigType=0;
+    if( ev->GetTriggerType()!=0 ){ toffset=100.; trigType=1;}
 
     int NDigiHits0=ev->GetNcherenkovdigihits();
     hitMan->ReserveDigiHits(NDigiHits0);
@@ -77,14 +129,15 @@ void PrintMCTruthNeuCap(const MCNeuCapManager *ncapMan)
         for(int j=0; j<ncapMan->GetNumOfNeuCaptures(); j++)
         {
             cout<<" j: " << j
-                <<" - time: " << ncapMan->GetCaptureTime(j)
+                <<" - time: " << ncapMan->GetCaptureVertex(j, 3)
                 <<" - nuc: "  << ncapMan->GetCaptureNucleus(j)
                 <<" - nG: " << ncapMan->GetNumGammas(j)
                 <<" - eGTot: " << ncapMan->GetTotalGammaEnergy(j)
-                <<" - pos: (" << ncapMan->GetCapturePosition(j, 0)
-                <<", " << ncapMan->GetCapturePosition(j, 1)
-                <<", " << ncapMan->GetCapturePosition(j, 2)
-                <<") - gPDG: " << ncapMan->GetGrandParentPDG(j)
+                <<" - pos: (" << ncapMan->GetCaptureVertex(j, 0)
+                <<", " << ncapMan->GetCaptureVertex(j, 1)
+                <<", " << ncapMan->GetCaptureVertex(j, 2)
+                <<") - dwall: " << ncapMan->GetCaptureDwall(j)
+                <<" - gPDG: " << ncapMan->GetGrandParentPDG(j)
                 <<" - aPDG: " << ncapMan->GetAncestorParentPDG(j)
                 <<" - isPriNeu: " << ncapMan->GetIsPrimaryNeu(j)
                 <<endl;
@@ -93,8 +146,6 @@ void PrintMCTruthNeuCap(const MCNeuCapManager *ncapMan)
     }
 }
 
-
-//void GetGeometryInfo(const TString filename, VertexFit* vf)
 void GetGeometryInfo(const TString filename)
 {
     TFile *f=TFile::Open(filename);
@@ -133,10 +184,9 @@ int main(int argc, char **argv)
     cout<<" InFileName: " << InFileName <<endl;
     cout<<" OutFileName: " << OutFileName <<endl;
 
-    VertexFit *vf=new VertexFit();
-
-    //GetGeometryInfo(InFileName, vf);
     GetGeometryInfo(InFileName);
+
+    VertexFit *vf=new VertexFit();
     NtagUtil *nu=NtagUtil::GetInstance();
     vf->SetPMTPositions(nu->GetPMTPositions());
 
@@ -148,7 +198,7 @@ int main(int argc, char **argv)
     fnRooTrackerVtxTCA=new TClonesArray("NRooTrackerVtx");
     fRooTrackerTree->SetBranchAddress("NRooTrackerVtx", &fnRooTrackerVtxTCA);
  
-    // Create a WCSimRootEvent to put stuff from the tree in
+    // Create a WCSimRootEvent to put stuff from the tree
     WCSimRootEvent* wcsimrootsuperevent = new WCSimRootEvent();
 
     // Set the branch address for reading from the tree
@@ -164,6 +214,7 @@ int main(int argc, char **argv)
     NtagData *nData=new NtagData();
     nData->CreateTree(OutFileName);
 
+    int trigType=-1;
     int nCandTot=0;
     int nNeuCapTot=0;
     clock_t start = clock();
@@ -179,11 +230,15 @@ int main(int argc, char **argv)
         
         GetTracks(wcsimrootevent, trackArr);
         ncapMan->FindMCTruthNCaptures( trackArr );
+        ncapMan->FindMCTruthMichelEs( trackArr );
         //PrintMCTruthNeuCap(ncapMan);
-        SetDigiHits(wcsimrootevent, hitMan); 
-        hitMan->SearchNeuCandidates();
+        SetMCTruthNeuCapInfo(nData, ncapMan);
+        SetMCTruthMichelEInfo(nData, ncapMan);
 
+        SetDigiHits(wcsimrootevent, hitMan, trigType); 
+        hitMan->SearchNeuCandidates();
         cout<<" iEntry: " << iEntry 
+            <<" - mode: " << aVtx->EvtCode->GetString().Atoi()
             <<" - nMCNeu: " << ncapMan->GetNumOfNeuCaptures()
             <<" - nNeuCand: " << hitMan->GetNumOfNCandidates() 
             <<endl;
@@ -192,32 +247,25 @@ int main(int argc, char **argv)
         nCandTot+=hitMan->GetNumOfNCandidates();
         nNeuCapTot+=ncapMan->GetNumOfNeuCaptures();
 
-        vector<HitCluster> cl=hitMan->GetClusters();
+        float vtxTmp[4]={0.};
         for(int k=0; k<hitMan->GetNumOfNCandidates(); k++)
         {
-            vf->SetCluster(&cl[k]);
-            vf->FitVertex();
-            //cout<<"    - " << k 
-            //    <<" th cand - N10: " << hitMan->GetN10(k)
-            //    <<" - tFirst: "      << hitMan->GetFirstHitTime(k)
-            //    <<" - tRec: "        << vf->GetNLLikeVertex(3)
-            //    <<" - Pos: ("        << vf->GetNLLikeVertex(0)
-            //    <<", "        << vf->GetNLLikeVertex(1)
-            //    <<", "        << vf->GetNLLikeVertex(2)
-            //    <<")"
-            //    <<endl;
+            HitCluster cl=hitMan->GetCluster(k);
+            vf->FitVertex(&cl);
+            for(int l=0; l<4; l++){ vtxTmp[l]=vf->GetNLLikeVertex(l); }
+            SetThisNeuCandInfo(nData, cl, vtxTmp);
         }
-        //cout<<endl;
-        //
+        nData->fTrigType=trigType;
         nData->FillTree();
         wcsimrootsuperevent->ReInitialize();
         aVtx=NULL;
         fnRooTrackerVtxTCA->Clear();
     }
-
     clock_t end = clock();
     std::cout << "duration = " << (double)(end - start) / CLOCKS_PER_SEC << "sec.\n";
     cout<<" nCandTot: " <<  nCandTot <<endl;
+
+    nData->WriteTree();
 
 return 0;
 }

@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "TVector3.h"
+#include "TMath.h"
 
 using std::cout;
 using std::endl;
@@ -15,9 +16,10 @@ class NtagUtil
         static NtagUtil* GetInstance();
         void Finalize();
 
-        float Pos(const int &c, const int &i){ return fPos[c](i); }
+        float GetDwall(const float*);
         float GetIDTankRadius(){ return fIDTankR; }
         float GetIDTankHeight(){ return fIDTankH; }
+
         vector<TVector3> GetPMTPositions() const {return fPos; }
 
 
@@ -33,6 +35,7 @@ class NtagUtil
 
         float fIDTankR;
         float fIDTankH;
+        float fIDTankY;
         float fCWater;
 
         vector<TVector3> fPos; 

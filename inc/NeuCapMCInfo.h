@@ -22,8 +22,19 @@ struct MCNeuCap_t
     bool isPriNeu       =false;
     float captureTime   =-99999.;
     float capturePos[3] ={-99999.};
+    float captureDwall  =0.;
     int nGammas         =0;
     float eGamma[20]    ={0.};
     float eGammaTotal   =0.;
     bool    isFound     =false;
+};
+
+struct MichelE_t
+{
+    int grandID         =-1;
+    int parentPDG       =-1;
+    float Pos[3]        ={-9999.};
+    float Time          =-9999.;
+    float Dwall         =-9999.;
+    float energy        =-9999.;
 };

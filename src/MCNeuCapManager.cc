@@ -6,9 +6,7 @@ MCNeuCapManager::MCNeuCapManager()
 
 MCNeuCapManager::~MCNeuCapManager()
 {
-        std::cout<<" Destructing" <<std::endl;
     std::vector<MCNeuCap_t>().swap(fNeuCap);
-    std::cout<<" Hello: " <<std::endl;
 }
 
 void MCNeuCapManager::GetLineAgeInfo(const int &trgtIdx, 
@@ -86,13 +84,17 @@ void MCNeuCapManager::GetParentIndexAndTrackID(const int &trgtIdx,
 }
 
 
-void MCNeuCapManager::FindMCTruthNCaptures(vector<Track_t> track)
+void MCNeuCapManager::FindMCTruthNCaptures(const vector<Track_t>& track)
 {
     fNeuCap.clear();
     std::vector<MCNeuCap_t>().swap(fNeuCap);
 
     int index=-99999;
     int id=-99999;
+    NtagUtil *us=NtagUtil::GetInstance();
+    std::vector<float> ctime;
+    std::vector<MCNeuCap_t> NeuCapTmp;
+
     for(unsigned int i=0; i<track.size(); i++)
     {
         this->GetParentIndexAndTrackID(i, track, id, index);
@@ -107,6 +109,7 @@ void MCNeuCapManager::FindMCTruthNCaptures(vector<Track_t> track)
             aNCap.capturePos[0] =track[i].posSrt[0];
             aNCap.capturePos[1] =track[i].posSrt[1];
             aNCap.capturePos[2] =track[i].posSrt[2];
+            aNCap.captureDwall  =us->GetDwall(track[i].posSrt);
 
             int grandID     =-1;
             int grandPDG    =-1;
@@ -117,12 +120,24 @@ void MCNeuCapManager::FindMCTruthNCaptures(vector<Track_t> track)
             aNCap.grandPDG      =grandPDG;
             aNCap.isPriNeu      =isPriNeu;
             aNCap.ancestorPDG   =ancestorPDG;
-            fNeuCap.push_back( aNCap );
+            NeuCapTmp.push_back( aNCap );
+
+            ctime.push_back( track[i].time );
         }
     }
-    if( fNeuCap.size()>0 )
+
+    int nNeuCap=(int)ctime.size();
+    if( nNeuCap )
     {
-        this->FindGammas(track);
+        std::vector<int> idx(nNeuCap, -1);
+        TMath::Sort(nNeuCap, &ctime[0], &idx[0], kFALSE);
+        fNeuCap.reserve(nNeuCap);   
+        for(int i=0; i<nNeuCap; i++){ fNeuCap.push_back( NeuCapTmp[ idx[i] ] ); }
+
+        if( fNeuCap.size()>0 )
+        {
+            this->FindGammas(track);
+        }
     }
 }
 
@@ -148,60 +163,33 @@ void MCNeuCapManager::FindGammas(const vector<Track_t> &track)
     }
 }
 
-double MCNeuCapManager::GetCaptureTime(const int &incap) const
+void MCNeuCapManager::FindMCTruthMichelEs(const vector<Track_t> &track)
 {
-    if( incap>=int( fNeuCap.size() ) )
+    fMichelE.clear();
+    std::vector<MichelE_t>().swap(fMichelE);
+
+    NtagUtil *us=NtagUtil::GetInstance();
+    int id=-99999;
+    int index=-9999;
+    for(unsigned int i=0; i<track.size(); i++)
     {
-        std::cout<<" Current event has no " << incap <<" th capture" <<std::endl;
-        std::cout<<" -> EXIT" <<std::endl;
-        exit(-1);
+        if( track[i].parentID==0 ){ continue; }
+
+        this->GetParentIndexAndTrackID(i, track, id, index);
+        if( index<0 ){ continue; }
+        if( track[i].thisPDG==GL::kPDG_ELECTRON )
+        {
+            cout<<" Found a Michel-e" <<endl;
+            MichelE_t aMiE;
+            aMiE.Time       =track[i].time;
+            aMiE.Pos[0]     =track[i].posSrt[0];
+            aMiE.Pos[1]     =track[i].posSrt[1];
+            aMiE.Pos[2]     =track[i].posSrt[2];
+            aMiE.Dwall      =us->GetDwall(track[i].posSrt);
+            aMiE.energy     =track[i].energy;
+            aMiE.grandID    =track[index].parentID;
+            aMiE.parentPDG  =track[index].thisPDG; 
+            fMichelE.push_back( aMiE );
+        }
     }
-    return fNeuCap[incap].captureTime;
-}
-
-int MCNeuCapManager::GetCaptureNucleus(const int &incap) const
-{
-    if( incap>=int( fNeuCap.size() ) )
-    {
-        std::cout<<" Current event has no " << incap <<" th capture" <<std::endl;
-        std::cout<<" -> EXIT" <<std::endl;
-        exit(-1);
-    }
-    return fNeuCap[incap].nucleusPDG;
-}
-
-int MCNeuCapManager::GetNumGammas(const int &incap) const
-{
-    if( incap>=int( fNeuCap.size() ) )
-    {
-        std::cout<<" Current event has no " << incap <<" th capture" <<std::endl;
-        std::cout<<" -> EXIT" <<std::endl;
-        exit(-1);
-    }
-    return fNeuCap[incap].nGammas;
-}
-
-double MCNeuCapManager::GetTotalGammaEnergy(const int &incap) const
-{
-    if( incap>=int( fNeuCap.size() ) )
-    {
-        std::cout<<" Current event has no " << incap <<" th capture" <<std::endl;
-        std::cout<<" -> EXIT" <<std::endl;
-        exit(-1);
-    }
-    return fNeuCap[incap].eGammaTotal;
-}
-
-
-
-
-double MCNeuCapManager::GetCapturePosition(const int &incap, const int &ipos) const
-{
-    if( incap>=int( fNeuCap.size() ) )
-    {
-        std::cout<<" Current event has no " << incap <<" th capture" <<std::endl;
-        std::cout<<" -> EXIT" <<std::endl;
-        exit(-1);
-    }
-    return fNeuCap[incap].capturePos[ipos];
 }

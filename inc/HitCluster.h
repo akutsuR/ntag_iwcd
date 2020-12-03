@@ -9,20 +9,22 @@ class HitCluster
         HitCluster();
         virtual ~HitCluster();
 
-        int N() const;  
-        int C(const int &i) const { return fPMTid[i]; }
-        float T(const int &i) const { return fTime[i]; }
-        int S(const int) const;
+        int N() const {return (int)fTim.size(); }
+        int S(const int &i) const { return fFlg[i]; }
+        int C(const int &i) const { return fCab[i]; }
+        float T(const int &i) const { return fTim[i]; }
+        int N10() const {return fN10; }
+
+        void ReserveNhits(const int&);
+        void AddHit(const int&, const float&, const int&);
+        void SetN10(const int& n){ fN10=n; }
+        void Clear();
+
         float GetTrueHitFraction() const;
 
-        void AddHit(const int&, const float&, const int&);
-        void SetPreFitVertex(const float*);
-        void Print();
-
     private :
-        void Clear();
-        std::vector<int> fPMTid;
-        std::vector<float> fTime;
-        std::vector<int> fSig;
-        float fPreVtx[4];
+        std::vector<int> fCab;
+        std::vector<float> fTim;
+        std::vector<int> fFlg;
+        int fN10;
 };

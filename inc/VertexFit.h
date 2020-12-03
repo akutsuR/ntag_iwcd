@@ -44,10 +44,10 @@ class VertexFit
 
         void SetPMTPositions(const vector<TVector3> &p){ fPos=p; }
         void LoadTemplate(std::string);
-        void SetCluster(HitCluster *aCl){ fCl=aCl; }
-        void FitVertex();
 
+        void FitVertex(HitCluster*);
         float GetNLLikeVertex(const int &i) const {return fVertex[eNLLike][i]; }
+
         float GetTToFT0Vertex(const int &i) const {return fVertex[eTToFT0][i]; }
         
         double GetTToFSD(const double*);
@@ -85,6 +85,7 @@ class VertexFit
         int fNPMTs;
         std::vector<TVector3> fPos;
         std::vector<TVector3> fDir;
+
         HitCluster* fCl;
         HitCluster* fClSel;
 
@@ -95,13 +96,6 @@ class VertexFit
         vector<vector<double>> fLim;
         vector<vector<double>> fVertex;
 
-        double fLim_x[2];
-        double fLim_y[2];
-        double fLim_z[2];
-        double fLim_t[2];
-        
-
         std::vector<std::vector<double>> fPar;
-
         int    fMinPoint[3];
 };

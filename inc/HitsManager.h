@@ -11,9 +11,8 @@
 #include "global.h"
 #include "HitCluster.h"
 
-const int MAXHITS=200000;
-const int NOISE_DN=1;
-const int NOISE_AP=2;
+const int kNoiseDN=1;
+const int kNoiseAP=2;
 
 class HitsManager
 {
@@ -27,35 +26,26 @@ class HitsManager
         void SelectDigiHits();
         void SearchNeuCandidates();
 
-        int  GetNumOfNCandidates() const;
-        int GetN10(const int&) const;
-        float GetFirstHitTime(const int&) const;
-        std::vector<HitCluster> GetClusters() const;
+        int  GetNumOfNCandidates() const { return (int)fClusters.size(); }
+        int GetN10(const int &i) const { return fClusters[i].N10(); }
+        float GetFirstHitTime(const int &i) const { return fClusters[i].T(0); }
+        HitCluster GetCluster(const int &i) const { return fClusters[i]; }
+
+        std::vector<HitCluster> GetClusters() const { return fClusters; }
 
         // Only for MC studies
-        void SetRemoveAfterpulse(const bool);
-        void SetRemoveDarkNoise(const bool);
+        void SetRemoveAfterpulse(const bool &b){ fRemoveAP=b; }
+        void SetRemoveDarkNoise(const bool &b){ fRemoveDN=b; }
 
     private:
-        void ReserveSelHits(const int&);
-        void AddCluster(const int&);
-        int GetNXXX(const int&, const float&);
-
-        TTree *fDigiHits;
-        Int_t fNDigiHits;
-        Float_t fT[MAXHITS];
-        Int_t fTube[MAXHITS];
-        Bool_t fIsAfterpulse[MAXHITS];
-        Bool_t fIsDark[MAXHITS];
+        void AddCluster(const int&, const int&, const int&);
+        int GetNXXX(const HitCluster*, const int&, const float&, int&);
 
         std::vector<float>  fTimRaw;
         std::vector<int>    fCabRaw;
         std::vector<int>    fFlgRaw;
-
-        std::vector<float>  fTim;
-        std::vector<int>    fCab;
-        std::vector<int>    fFlg;
         std::vector<HitCluster> fClusters;
+        HitCluster *fAllHits;
 
         float fTWindowLow;
         float fTWindowUp; 
@@ -63,7 +53,4 @@ class HitsManager
         bool  fRemoveAP;
 
         //////////////////////////
-        Int_t fNCand;
-        Float_t fCapTime[100];
-        Int_t   fNXXX[7][100];
 };
