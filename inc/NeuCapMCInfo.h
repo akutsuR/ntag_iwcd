@@ -16,17 +16,29 @@ struct MCNeuCap_t
 {
     int nucleusPDG      =-1;
     int parentID        =-1;
-    int grandID         =-1;
-    int grandPDG        =-1;
-    int ancestorPDG     =-1;
-    bool isPriNeu       =false;
+//    int grandID         =-1;
+//    int grandPDG        =-1;
+//    int ancestorPDG     =-1;
+//    bool isPriNeu       =false;
+//
     float captureTime   =-99999.;
     float capturePos[3] ={-99999.};
     float captureDwall  =0.;
     int nGammas         =0;
     float eGamma[20]    ={0.};
     float eGammaTotal   =0.;
-    bool    isFound     =false;
+
+    int nAncestor       =0;
+    float antrVtx_x[50] ={-9999.};
+    float antrVtx_y[50] ={-9999.};
+    float antrVtx_z[50] ={-9999.};
+    float antrVtx_t[50] ={-9999.};
+    float antrDir_x[50] ={-9999.};
+    float antrDir_y[50] ={-9999.};
+    float antrDir_z[50] ={-9999.};
+    float antrEnergy[50]={-9999.};
+    int antrPrntID[50]  ={-9999};
+    int antrPDG[50]     ={-9999};
 };
 
 struct MichelE_t

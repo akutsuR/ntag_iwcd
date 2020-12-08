@@ -18,35 +18,73 @@ void NtagData::ClearVariables()
 {
     fTrigType=-1;
 
+    // Variables related to reconstructed
+    fncrNCand=0;
+    for(int i=0; i<kMaxRecoNCap; i++)
+    {
+        fncrN10Raw[i]   =0;
+        fncrDwall[i]    =0.;
+        fncrTRaw0[i]    =0.; 
+        fncrIdxNCap[i]  =-1;
+        for(int j=0; j<4; j++)
+        {
+            fncrVtx[i][j]       =0.;
+            fncrDvtxNCap[i][j]  =0.;
+        }
+        fncrIdxMiE[i]   =-1;
+        fncrDtMiE[i]    =0.; 
+
+        fncrNhits[i]    =0;
+        for(int j=0; j<kNhitsMAX; j++)
+        {
+            fncrCabHits[i][j]=-1;
+            fncrTimHits[i][j]=-1.;
+            fncrFlgHits[i][j]=-1;
+        }
+    }
+
+    // Variables for MC truth neutron capture
     fnctNCap=0;
     for(int i=0; i<kMaxTrueNCap; i++)
     {
         fnctDwall[i]    =0.;
         fnctNuc[i]      =0;
-        fnctType[i]     =0;
+        fnctType[i]     =-1;
         fnctNGam[i]     =0;
         fnctETot[i]     =0.;
         for(int j=0; j<4; j++)
         {
             fnctVtx[i][j]=0.;
         }
+
+        fnctNAntr[i]=0; 
+        for(int j=0; j<kMaxTrueAntr; j++)
+        {
+            fnctAntrVtx_x[i][j]     =0.;
+            fnctAntrVtx_y[i][j]     =0.;
+            fnctAntrVtx_z[i][j]     =0.;
+            fnctAntrVtx_t[i][j]     =0.;
+            fnctAntrDir_x[i][j]     =0.;
+            fnctAntrDir_y[i][j]     =0.;
+            fnctAntrDir_z[i][j]     =0.;
+            fnctAntrEnergy[i][j]    =0.;
+            fnctAntrPrntID[i][j]    =-1;
+            fnctAntrPDG[i][j]       =-1;
+        }
     }
 
-    fncrNCand=0;
-    for(int i=0; i<kMaxRecoNCap; i++)
+    // Variables for MC truth Michel-e (including all the secondary electrons)
+    fnctNMiE;
+    for(int i=0; i<kMaxTrueMiE; i++)
     {
-        fncrN10Raw[i]   =0;
-        fncrDwall[i]    =0.;
-        fncrNhits[i]    =0;
-        fncrTRaw0[i]    =0.; 
-        fncrIdxNCap[i]  =0;
         for(int j=0; j<4; j++)
         {
-            fncrVtx[i][j]       =0.;
-            fncrDvtxNCap[i][j]  =0.;
+            fnctMiEVtx[i][j]=0.;
         }
-        fncrIdxMiE[i]   =0;
-        fncrDtMiE[i]    =0.; 
+        fnctMiEDwall[i]     =0.;
+        fnctMiEEnergy[i]    =0.;
+        fnctMiEPrntPDG[i]   =-1;
+        fnctMiEGrPrntID[i]  =-1;
     }
 }
 
@@ -57,6 +95,20 @@ void NtagData::CreateTree(const TString &OutFileName)
 
     fTree->Branch("TrigType",       &fTrigType,     "TrigType/I");
 
+    fTree->Branch("ncrNCand",       &fncrNCand,      "ncrNCand/I");
+    fTree->Branch("ncrN10Raw",      fncrN10Raw,      "ncrN10Raw[ncrNCand]/I");
+    fTree->Branch("ncrVtx",         fncrVtx,         "ncrVtx[ncrNCand][4]/F");
+    fTree->Branch("ncrDwall",       fncrDwall,       "ncrDwall[ncrNCand]/F");
+    fTree->Branch("ncrTRaw0",       fncrTRaw0,       "ncrTRaw0[ncrNCand]/F");
+    fTree->Branch("ncrIdxNCap",     fncrIdxNCap,     "ncrIdxNCap[ncrNCand]/I");
+    fTree->Branch("ncrDvtxNCap",    fncrDvtxNCap,    "ncrDvtxNCap[ncrNCand][4]/F");
+    fTree->Branch("ncrIdxMiE",      fncrIdxMiE,      "ncrIdxMiE[ncrNCand]/I");
+    fTree->Branch("ncrDtMiE",       fncrDtMiE,       "ncrDtMiE[ncrNCand]/F");
+    fTree->Branch("ncrNhits",       fncrNhits,       "ncrNhits[ncrNCand]/I");
+    fTree->Branch("ncrCabHits",     fncrCabHits,     Form("ncrCabHits[ncrNCand][%d]/I", kNhitsMAX));
+    fTree->Branch("ncrTimHits",     fncrTimHits,     Form("ncrTimHits[ncrNCand][%d]/I", kNhitsMAX));
+    fTree->Branch("ncrFlgHits",     fncrFlgHits,     Form("ncrFlgHits[ncrNCand][%d]/I", kNhitsMAX));
+
     fTree->Branch("nctNCap",        &fnctNCap,          "nctNCap/I");
     fTree->Branch("nctVtx",         fnctVtx,            "nctVtx[nctNCap][4]/F");
     fTree->Branch("nctDwall",       fnctDwall,          "nctDwall[nctNCap]/F");
@@ -65,23 +117,24 @@ void NtagData::CreateTree(const TString &OutFileName)
     fTree->Branch("nctNGam",        fnctNGam,           "nctNGam[nctNCap]/I");
     fTree->Branch("nctETot",        fnctETot,           "nctETot[nctNCap]/F");
 
+    fTree->Branch("nctNAntr",        fnctNAntr,         "nctNAntr[nctNCap]/I");
+    fTree->Branch("nctAntrVtx_x",    fnctAntrVtx_x,     Form("nctAntrVtx_x[nctNCap][%d]/F", kMaxTrueAntr));
+    fTree->Branch("nctAntrVtx_y",    fnctAntrVtx_y,     Form("nctAntrVtx_y[nctNCap][%d]/F", kMaxTrueAntr));
+    fTree->Branch("nctAntrVtx_z",    fnctAntrVtx_z,     Form("nctAntrVtx_z[nctNCap][%d]/F", kMaxTrueAntr));
+    fTree->Branch("nctAntrVtx_t",    fnctAntrVtx_t,     Form("nctAntrVtx_t[nctNCap][%d]/F", kMaxTrueAntr));
+    fTree->Branch("nctAntrDir_x",    fnctAntrDir_x,     Form("nctAntrDir_x[nctNCap][%d]/F", kMaxTrueAntr));
+    fTree->Branch("nctAntrDir_y",    fnctAntrDir_y,     Form("nctAntrDir_y[nctNCap][%d]/F", kMaxTrueAntr));
+    fTree->Branch("nctAntrDir_z",    fnctAntrDir_z,     Form("nctAntrDir_z[nctNCap][%d]/F", kMaxTrueAntr));
+    fTree->Branch("nctAntrEnergy",   fnctAntrEnergy,    Form("nctAntrEnergy[nctNCap][%d]/F", kMaxTrueAntr));
+    fTree->Branch("nctAntrPrntID",   fnctAntrPrntID,    Form("nctAntrPrntID[nctNCap][%d]/I", kMaxTrueAntr));
+    fTree->Branch("nctAntrPDG",      fnctAntrPDG,       Form("nctAntrPDG[nctNCap][%d]/I", kMaxTrueAntr));
+
     fTree->Branch("nctNMiE",        &fnctNMiE,          "nctNMiE/I");
     fTree->Branch("nctMiEVtx",      fnctMiEVtx,         "nctMiEVtx[nctNMiE][4]/F");
     fTree->Branch("nctMiEDwall",    fnctMiEDwall,       "nctMiEDwall[nctNMiE]/F");
     fTree->Branch("nctMiEEnergy",   fnctMiEEnergy,      "nctMiEEnergy[nctNMiE]/F");
     fTree->Branch("nctMiEPrntPDG",  fnctMiEPrntPDG,     "nctMiEPrntPDG[nctNMiE]/I");
     fTree->Branch("nctMiEGrPrntID", fnctMiEGrPrntID,    "nctMiEGrPrntID[nctNMiE]/I");
-
-    fTree->Branch("ncrNCand",       &fncrNCand,      "ncrNCand/I");
-    fTree->Branch("ncrN10Raw",      fncrN10Raw,      "ncrN10Raw[ncrNCand]/I");
-    fTree->Branch("ncrVtx",         fncrVtx,         "ncrVtx[ncrNCand][4]/F");
-    fTree->Branch("ncrDwall",       fncrDwall,       "ncrDwall[ncrNCand]/F");
-    fTree->Branch("ncrNhits",       fncrNhits,       "ncrNhits[ncrNCand]/I");
-    fTree->Branch("ncrTRaw0",       fncrTRaw0,       "ncrTRaw0[ncrNCand]/F");
-    fTree->Branch("ncrIdxNCap",     fncrIdxNCap,     "ncrIdxNCap[ncrNCand]/I");
-    fTree->Branch("ncrDvtxNCap",    fncrDvtxNCap,    "ncrDvtxNCap[ncrNCand][4]/F");
-    fTree->Branch("ncrIdxMiE",      fncrIdxMiE,      "ncrIdxMiE[ncrNCand]/I");
-    fTree->Branch("ncrDtMiE",       fncrDtMiE,       "ncrDtMiE[ncrNCand]/F");
 }
 
 void NtagData::SetTree(TTree *t)

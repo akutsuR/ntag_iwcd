@@ -11,8 +11,7 @@
 #include "global.h"
 #include "HitCluster.h"
 
-const int kNoiseDN=1;
-const int kNoiseAP=2;
+using namespace GL;
 
 class HitsManager
 {

@@ -41,8 +41,14 @@ void SetThisNeuCandInfo(NtagData *da, const HitCluster &cl, const float *vtx)
         da->fncrVtx[i][j]=vtx[j];
     }
     da->fncrDwall[i]    =nu->GetDwall(vtx);
-    da->fncrNhits[i]    =cl.N();
     da->fncrTRaw0[i]    =cl.T(0);
+    da->fncrNhits[i]    =cl.N();
+    for(int j=0; j<cl.N(); j++)
+    {
+        da->fncrCabHits[i][j]   =cl.C(j);
+        da->fncrTimHits[i][j]   =cl.T(j);
+        da->fncrFlgHits[i][j]   =cl.S(j);
+    }
     da->fncrNCand+=1;
 }
 
@@ -74,10 +80,25 @@ void SetMCTruthNeuCapInfo(NtagData *da, const MCNeuCapManager *nm)
         }
         da->fnctDwall[i]=nm->GetCaptureDwall(i);
         da->fnctNuc[i]  =nm->GetCaptureNucleus(i);
-        da->fnctType[i] =nm->GetIsPrimaryNeu(i); // Ancester type
+        da->fnctType[i] =nm->GetAncestorType(i);
         da->fnctNGam[i] =nm->GetNumGammas(i);
         da->fnctETot[i] =nm->GetTotalGammaEnergy(i);
         da->fnctNCap    +=1;
+
+        da->fnctNAntr[i]=nm->GetNumOfAncestors(i);
+        for(int j=0; j<da->fnctNAntr[i]; j++)
+        {
+            da->fnctAntrEnergy[i][j]    =nm->GetAntrEnergy(i,j);
+            da->fnctAntrVtx_x[i][j]     =nm->GetAntrVtx(i,j,0);
+            da->fnctAntrVtx_y[i][j]     =nm->GetAntrVtx(i,j,1);
+            da->fnctAntrVtx_z[i][j]     =nm->GetAntrVtx(i,j,2);
+            da->fnctAntrVtx_t[i][j]     =nm->GetAntrVtx(i,j,3);
+            da->fnctAntrDir_x[i][j]     =nm->GetAntrDir(i,j,0);
+            da->fnctAntrDir_y[i][j]     =nm->GetAntrDir(i,j,1);
+            da->fnctAntrDir_z[i][j]     =nm->GetAntrDir(i,j,2);
+            da->fnctAntrPrntID[i][j]    =nm->GetAntrParentID(i,j);
+            da->fnctAntrPDG[i][j]       =nm->GetAntrPDG(i,j);
+        }
     }
 }
 
@@ -137,9 +158,9 @@ void PrintMCTruthNeuCap(const MCNeuCapManager *ncapMan)
                 <<", " << ncapMan->GetCaptureVertex(j, 1)
                 <<", " << ncapMan->GetCaptureVertex(j, 2)
                 <<") - dwall: " << ncapMan->GetCaptureDwall(j)
-                <<" - gPDG: " << ncapMan->GetGrandParentPDG(j)
-                <<" - aPDG: " << ncapMan->GetAncestorParentPDG(j)
-                <<" - isPriNeu: " << ncapMan->GetIsPrimaryNeu(j)
+                //<<" - gPDG: " << ncapMan->GetGrandParentPDG(j)
+                //<<" - aPDG: " << ncapMan->GetAncestorParentPDG(j)
+                //<<" - isPriNeu: " << ncapMan->GetIsPrimaryNeu(j)
                 <<endl;
                 if( j+1==ncapMan->GetNumOfNeuCaptures() ){ cout<<endl; }
         }
@@ -172,6 +193,7 @@ void GetGeometryInfo(const TString filename)
         nu->AddPMTInfo(pos, dir);
     }
     if( wcgeom ){ delete wcgeom;    wcgeom=NULL; }
+    cout<<endl;
 }
 
 //ooooooooO000000000000000Ooooooooooo//
@@ -191,7 +213,8 @@ int main(int argc, char **argv)
     vf->SetPMTPositions(nu->GetPMTPositions());
 
     TFile *file = TFile::Open(InFileName);
-    gSystem->Load("$WCSIMDIR/libWCSimRoot.so");
+    //gSystem->Load("$WCSIMDIR/libWCSimRoot.so");
+    //
     // Get the a pointer to the tree from the file
     TTree *tree = (TTree*)file->Get("wcsimT");
     fRooTrackerTree=(TTree*)file->Get("fRooTrackerOutputTree");
@@ -218,8 +241,7 @@ int main(int argc, char **argv)
     int nCandTot=0;
     int nNeuCapTot=0;
     clock_t start = clock();
-    //for(int iEntry=0; iEntry<nEntries; iEntry++)
-    for(int iEntry=0; iEntry<100; iEntry++)
+    for(int iEntry=0; iEntry<nEntries; iEntry++)
     {
         tree->GetEntry(iEntry);      
         fRooTrackerTree->GetEntry( iEntry );

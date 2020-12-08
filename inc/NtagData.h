@@ -4,13 +4,13 @@
 #include "TFile.h"
 #include "TTree.h"
 
+#include "global.h"
+
 using std::string;
 using std::cout;
 using std::endl;
+using namespace GL;
 
-const int kMaxTrueNCap=500;
-const int kMaxRecoNCap=500;
-const int kMaxTrueMiE=100;
 
 class NtagData
 {
@@ -34,6 +34,21 @@ class NtagData
     public:
         Int_t       fTrigType;
 
+        // Reco. n capture including false event 
+        Int_t       fncrNCand;
+        Int_t       fncrN10Raw[kMaxRecoNCap];
+        Float_t     fncrVtx[kMaxRecoNCap][4];
+        Float_t     fncrDwall[kMaxRecoNCap];
+        Float_t     fncrTRaw0[kMaxRecoNCap]; 
+        Int_t       fncrIdxNCap[kMaxRecoNCap];
+        Float_t     fncrDvtxNCap[kMaxRecoNCap][4];
+        Int_t       fncrIdxMiE[kMaxRecoNCap];
+        Float_t     fncrDtMiE[kMaxRecoNCap];
+        Int_t       fncrNhits[kMaxRecoNCap];
+        Int_t       fncrCabHits[kMaxRecoNCap][kNhitsMAX];
+        Float_t     fncrTimHits[kMaxRecoNCap][kNhitsMAX];
+        Int_t       fncrFlgHits[kMaxRecoNCap][kNhitsMAX];
+
         // MC truth n capture
         Int_t       fnctNCap;
         Float_t     fnctVtx[kMaxTrueNCap][4];
@@ -43,6 +58,20 @@ class NtagData
         Int_t       fnctNGam[kMaxTrueNCap];
         Float_t     fnctETot[kMaxTrueNCap];
 
+        // Ancestors associated with neutron capture
+        Int_t       fnctNAntr[kMaxTrueNCap]; 
+        Float_t     fnctAntrVtx_x[kMaxTrueNCap][kMaxTrueAntr];
+        Float_t     fnctAntrVtx_y[kMaxTrueNCap][kMaxTrueAntr];
+        Float_t     fnctAntrVtx_z[kMaxTrueNCap][kMaxTrueAntr];
+        Float_t     fnctAntrVtx_t[kMaxTrueNCap][kMaxTrueAntr];
+        Float_t     fnctAntrDir_x[kMaxTrueNCap][kMaxTrueAntr];
+        Float_t     fnctAntrDir_y[kMaxTrueNCap][kMaxTrueAntr];
+        Float_t     fnctAntrDir_z[kMaxTrueNCap][kMaxTrueAntr];
+        Float_t     fnctAntrEnergy[kMaxTrueNCap][kMaxTrueAntr];
+        Int_t       fnctAntrPrntID[kMaxTrueNCap][kMaxTrueAntr];
+        Int_t       fnctAntrPDG[kMaxTrueNCap][kMaxTrueAntr];
+
+
         // MC truth Michel-e (to avoid confusion of n capture)
         Int_t       fnctNMiE;
         Float_t     fnctMiEVtx[kMaxTrueMiE][4];
@@ -50,16 +79,4 @@ class NtagData
         Float_t     fnctMiEEnergy[kMaxTrueMiE];
         Int_t       fnctMiEPrntPDG[kMaxTrueMiE];
         Int_t       fnctMiEGrPrntID[kMaxTrueMiE];
-
-        // Reco. n capture including false event 
-        Int_t       fncrNCand;
-        Int_t       fncrN10Raw[kMaxRecoNCap];
-        Float_t     fncrVtx[kMaxRecoNCap][4];
-        Float_t     fncrDwall[kMaxRecoNCap];
-        Int_t       fncrNhits[kMaxRecoNCap];
-        Float_t     fncrTRaw0[kMaxRecoNCap]; 
-        Int_t       fncrIdxNCap[kMaxRecoNCap];
-        Float_t     fncrDvtxNCap[kMaxRecoNCap][4];
-        Int_t       fncrIdxMiE[kMaxRecoNCap];
-        Float_t     fncrDtMiE[kMaxRecoNCap];
 };

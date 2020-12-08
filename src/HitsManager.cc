@@ -1,10 +1,5 @@
 #include "HitsManager.h"
 
-const float TWID            =70.;
-const int   N10MAX          =70;
-const int   NhitsMAX        =90;
-const int   N10THR          =6;
-
 HitsManager::HitsManager() :
 fTWindowLow( 6000. /* ns */ ),
 fTWindowUp( 200000. /* ns */ ),
@@ -124,7 +119,7 @@ void HitsManager::SearchNeuCandidates()
             nHitsCand   =this->GetNXXX(fAllHits, i, 60., last_hit);
             if( prevT0>TWID && 
                 N10<N10MAX  &&
-                nHitsCand<NhitsMAX)
+                nHitsCand<kNhitsMAX)
             {
                 nCand+=1;
                 this->AddCluster(i, last_hit, N10);

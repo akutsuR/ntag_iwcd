@@ -10,7 +10,6 @@
 
 using std::vector;
 
-
 class MCNeuCapManager
 {
     public :
@@ -26,7 +25,9 @@ class MCNeuCapManager
         float GetCaptureDwall(const int &i) const                   { return fNeuCap[i].captureDwall; }
         int GetNumGammas(const int &i) const                        { return fNeuCap[i].nGammas; }
         float GetTotalGammaEnergy(const int &i) const               { return fNeuCap[i].eGammaTotal; }
-        int GetAncestorType(const int &) const;
+        int GetGrandParentPDG(const int &i) const                   { return fNeuCap[i].grandPDG; }
+        int GetAncestorParentPDG(const int &i) const                { return fNeuCap[i].ancestorPDG; }
+        int GetIsPrimaryNeu(const int &i) const                     { return fNeuCap[i].isPriNeu; }
 
         int GetNumOfMichelEs() const                                { return int(fMichelE.size()); }
         float GetMiEVertex(const int &i, const int &j) const        { return j<=2 ? fMichelE[i].Pos[j] : fMichelE[i].Time; }

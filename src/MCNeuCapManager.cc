@@ -50,37 +50,33 @@ void MCNeuCapManager::GetLineAgeInfo(const int &trgtIdx,
                 std::cout<<"   - Cannot find parent particle for track ID: " << track[idxThis].thisID <<std::endl;
                 break;
             }
-            //std::cout<<" nTry: " << nTry 
-            //         <<" - idxThis: " << idxThis
-            //         <<" - ParetnID[idxThis]: " << track[idxThis].parentID
-            //         <<" - idxNext: " << idx
-            //         <<" - ParentID[idxNext]: " << track[idx].parentID
-            //         <<" - ParentID: " << ParentID
-            //         <<std::endl;
             idxThis=idx;
             nTry+=1;
-            if( nTry>10 ){ exit(-1); }
+            if( nTry>50 ){ exit(-1); }
         }
         if( idx>=0 ){ ancestorPDG=track[idx].thisPDG; }
         else        { ancestorPDG=-9999999; }
     }
 }
 
-void MCNeuCapManager::GetParentIndexAndTrackID(const int &trgtIdx, 
+bool MCNeuCapManager::GetParentIndexAndTrackID(const int &trgtIdx, 
                                                const vector<Track_t> &track,
                                                int &prntId, 
                                                int &prntIdx)
 {
     prntIdx=-999999;
+    bool isFound=false;
     for(unsigned int i=0; i<track.size(); i++)
     {
         if( track[i].thisID==track[trgtIdx].parentID )
         {
             prntIdx=i; 
             prntId=track[i].parentID;
+            isFound=true;
             break;
         }
     }
+    return isFound;
 }
 
 
@@ -89,18 +85,19 @@ void MCNeuCapManager::FindMCTruthNCaptures(const vector<Track_t>& track)
     fNeuCap.clear();
     std::vector<MCNeuCap_t>().swap(fNeuCap);
 
-    int index=-99999;
-    int id=-99999;
+    int prntIdx=-99999; // index of parent in ``track'' for given child
+    int dummyID=-99999; // parent track ID of the parent
     NtagUtil *us=NtagUtil::GetInstance();
     std::vector<float> ctime;
     std::vector<MCNeuCap_t> NeuCapTmp;
 
     for(unsigned int i=0; i<track.size(); i++)
     {
-        this->GetParentIndexAndTrackID(i, track, id, index);
-        if( index<0 ){ continue; }
+        this->GetParentIndexAndTrackID(i, track, dummyID, prntIdx);
+        if( prntIdx<0 ){ continue; }
+
         if( track[i].thisPDG>GL::kPDG_NUCLEUS_OFFSET && 
-            track[index].thisPDG==GL::kPDG_NEUTRON)
+            track[prntIdx].thisPDG==GL::kPDG_NEUTRON)
         {
             MCNeuCap_t aNCap;
             aNCap.nucleusPDG    =track[i].thisPDG-GL::kPDG_NUCLEUS_OFFSET;
@@ -115,11 +112,36 @@ void MCNeuCapManager::FindMCTruthNCaptures(const vector<Track_t>& track)
             int grandPDG    =-1;
             bool isPriNeu   =false;
             int ancestorPDG =-1;
-            GetLineAgeInfo(i, track, grandID, grandPDG, isPriNeu, ancestorPDG);
-            aNCap.grandID       =grandID;
-            aNCap.grandPDG      =grandPDG;
-            aNCap.isPriNeu      =isPriNeu;
-            aNCap.ancestorPDG   =ancestorPDG;
+
+            //int prntIdx=-1; 
+            int strIdx=prntIdx;
+            int n=0;
+            bool isFound=false;
+            while( 1 )
+            {
+                isFound=this->GetParentIndexAndTrackID(strIdx, track, dummyID, prntIdx);
+                GetLineAgeInfo(i, track, grandID, grandPDG, isPriNeu, ancestorPDG);
+                aNCap.antrVtx_x[n]  =track[strIdx].posSrt[0];
+                aNCap.antrVtx_y[n]  =track[strIdx].posSrt[1];
+                aNCap.antrVtx_z[n]  =track[strIdx].posSrt[2];
+                aNCap.antrVtx_t[n]  =track[strIdx].time;
+                aNCap.antrDir_x[n]  =track[strIdx].dirSrt[0];
+                aNCap.antrDir_y[n]  =track[strIdx].dirSrt[1];
+                aNCap.antrDir_z[n]  =track[strIdx].dirSrt[2];
+                aNCap.antrEnergy[n] =track[strIdx].energy;
+                aNCap.antrPrntID[n] =track[strIdx].parentID;
+                aNCap.antrPDG[n]    =track[strIdx].thisPDG;
+                n+=1;
+                if( !isFound ){ break; }
+                strIdx=prntIdx;
+            }
+            aNCap.nAncestor=n;
+
+            //aNCap.grandID       =grandID;
+            //aNCap.grandPDG      =grandPDG;
+            //aNCap.isPriNeu      =isPriNeu;
+            //aNCap.ancestorPDG   =ancestorPDG;
+
             NeuCapTmp.push_back( aNCap );
 
             ctime.push_back( track[i].time );
@@ -179,7 +201,13 @@ void MCNeuCapManager::FindMCTruthMichelEs(const vector<Track_t> &track)
         if( index<0 ){ continue; }
         if( track[i].thisPDG==GL::kPDG_ELECTRON )
         {
-            cout<<" Found a Michel-e" <<endl;
+            // Cherenkov threshold, assuming
+            // a refractive index of 1.34 for
+            // water
+            if( track[i].energy<0.768 ) 
+            {
+                cout<<" Found a Michel-e, but below Cherenkov threshold " <<endl;
+            }
             MichelE_t aMiE;
             aMiE.Time       =track[i].time;
             aMiE.Pos[0]     =track[i].posSrt[0];
@@ -192,4 +220,55 @@ void MCNeuCapManager::FindMCTruthMichelEs(const vector<Track_t> &track)
             fMichelE.push_back( aMiE );
         }
     }
+}
+
+
+int MCNeuCapManager::GetAncestorType(const int &i) const
+{
+    // idex for the earliest ancestor
+    int idxAntr0=fNeuCap[i].nAncestor-1;
+    int type=-1;
+    if( idxAntr0==0 && 
+        fNeuCap[i].antrPDG[ idxAntr0 ]==GL::kPDG_NEUTRON &&
+        fNeuCap[i].antrPrntID[ idxAntr0 ]==0 )
+    {
+        // Neutron after FSI is captured directory
+        type=GL::eDirectPriNeu;
+    }
+    else if( fNeuCap[i].antrPDG[ idxAntr0 ]==GL::kPDG_PROTON &&
+             fNeuCap[i].antrPrntID[ idxAntr0 ]==0 )
+    {
+        // Neutron produced via proton SI is captured
+        type=GL::eProtonSecNeu;
+    }
+    else if( fNeuCap[i].antrPDG[ idxAntr0 ]==GL::kPDG_PiPlus &&
+             fNeuCap[i].antrPrntID[ idxAntr0 ]==0 )
+    {
+        // Neutron produced via neutron SI is captured
+        type=GL::ePiPlusSecNeu;
+    }
+    else if( fNeuCap[i].antrPDG[ idxAntr0 ]==GL::kPDG_PiMinus &&
+             fNeuCap[i].antrPrntID[ idxAntr0 ]==0 )
+    {
+        // Neutron produced via pi+ SI is captured
+        type=GL::ePiMinusSecNeu;
+    }
+    else if( fNeuCap[i].antrPDG[ idxAntr0 ]==GL::kPDG_PiMinus &&
+             fNeuCap[i].antrPrntID[ idxAntr0 ]==0 )
+    {
+        // Neutron produced via pi- SI is captured
+        type=GL::ePiMinusSecNeu;
+    }
+
+    else if( fNeuCap[i].antrPDG[ idxAntr0 ]==GL::kPDG_MuMinus &&
+             fNeuCap[i].antrPrntID[ idxAntr0 ]==0 )
+    {
+        // Neutron produced via pi- SI is captured
+        type=GL::eMuMinusCapNeu;
+    }
+    else
+    {
+        type=GL::eOtherSecNeu;
+    }
+    return type;
 }
